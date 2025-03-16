@@ -4,6 +4,10 @@ extern crate sha2;
 use bip39::Mnemonic;
 use sha2::{Digest, Sha256, Sha512};
 use std::env;
+use std::fs::File;
+use std::io;
+use std::io::BufRead;
+use std::path::Path;
 
 fn generate_mnemonic_from_entropy(entropy: &[u8]) -> Result<Vec<&'static str>, &'static str> {
     let mnemonic = Mnemonic::from_entropy(entropy).map_err(|_| "Invalid entropy length")?;
@@ -26,17 +30,14 @@ fn main() {
 
     let main = include_str!("../secret/main.txt");
 
-    let words = [
-        include_str!("../secret/key1.txt"),
-        include_str!("../secret/key2.txt"),
-    ];
+    let reader = io::BufReader::new(File::open(Path::new("./secret/wallets.txt")).unwrap());
 
     println!("Main key digest: \n    {}", hash(main));
 
     println!("==============================");
 
-    for word in words {
-        println!("Sub key digest: \n    {}", hash(word));
+    for word in reader.lines().map_while(Result::ok) {
+        println!("Sub key digest: \n    {}", hash(&word));
 
         if let Some(mnemonic_len) = mnemonic_len {
             let mut hash = Sha512::new_with_prefix(main.as_bytes());
@@ -46,10 +47,18 @@ fn main() {
             match generate_mnemonic_from_entropy(&t[0..(mnemonic_len / 3 * 4)]) {
                 Ok(mnemonic) => {
                     println!("Generated Mnemonic: ");
-                    mnemonic
-                        .iter()
-                        .enumerate()
-                        .for_each(|(i, &e)| println!("{}:\t {}", i, e));
+                    let mut output = vec![];
+                    mnemonic.iter().enumerate().for_each(|(i, &e)| {
+                        print!("{:02}: {:<10}", i, e);
+                        if i % 6 == 5 {
+                            println!();
+                        }
+                        output.push(e);
+                    });
+                    println!();
+                    println!();
+                    output.iter().for_each(|&e| print!("{} ", e));
+                    println!();
                 }
                 Err(e) => eprintln!("Error: {}", e),
             };
