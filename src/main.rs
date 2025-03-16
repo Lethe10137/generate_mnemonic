@@ -57,11 +57,11 @@ fn main() {
         .next()
         .map(|t| t.parse::<usize>().expect("Invalid mnemonic len"));
 
-    let main = include_str!("../secret/main.txt");
+    let main = io::BufReader::new(File::open(Path::new("./secret/main.txt")).unwrap()).lines().next().unwrap().unwrap();
 
     let reader = io::BufReader::new(File::open(Path::new("./secret/wallets.txt")).unwrap());
 
-    println!("Main key digest: \n    {}", hash(main));
+    println!("Main key digest: \n    {}", hash(main.as_str()));
 
     println!("==============================");
 
